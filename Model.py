@@ -9,26 +9,19 @@ from arch import arch_model
 import datetime
 import os
 
-# --- Configuration ---
 STOCKS = ['RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'SUNPHARMA.NS',
           'ITC.NS', 'BHARTIARTL.NS', 'LTTS.NS', 'ASIANPAINT.NS', 'ICICIBANK.NS']
-CAPITAL = 1000000  # 10 Lakhs
+CAPITAL = 1000000
 TRAIN_START = "2021-01-01"
-# Lookback period for sequences
 SEQ_LENGTH = 60
-
-# --- 1. Data Retrieval ---
 
 
 def fetch_data():
     print("Fetching historical data from Yahoo Finance...")
     today = datetime.datetime.now().strftime('%Y-%m-%d')
-    # Use auto_adjust=True to handle dividends/splits like a pro
     df = yf.download(STOCKS, start=TRAIN_START,
                      end=today, auto_adjust=True)['Close']
     return df.ffill()
-
-# --- 2. Sequence Creation ---
 
 
 def create_sequences(data, seq_length):
@@ -38,8 +31,6 @@ def create_sequences(data, seq_length):
         y.append(data[i])
     return np.array(X), np.array(y)
 
-# --- 3. LSTM Prediction Engine ---
-
 
 def get_lstm_prediction(stock_series):
     scaler = MinMaxScaler(feature_range=(0, 1))
@@ -47,8 +38,6 @@ def get_lstm_prediction(stock_series):
 
     X, y = create_sequences(scaled_data, SEQ_LENGTH)
     X = np.reshape(X, (X.shape[0], X.shape[1], 1))
-
-    # Architecture optimized for NIT Capstone requirements
     model = Sequential([
         LSTM(50, return_sequences=True, input_shape=(X.shape[1], 1)),
         Dropout(0.2),
@@ -58,29 +47,20 @@ def get_lstm_prediction(stock_series):
     ])
     model.compile(optimizer='adam', loss='mean_squared_error')
 
-    # Epochs set to 5 for speed; increase to 10-20 for higher accuracy
     model.fit(X, y, epochs=5, batch_size=32, verbose=0)
 
-    # Predict the next step using the last SEQ_LENGTH days
     last_seq = scaled_data[-SEQ_LENGTH:].reshape(1, SEQ_LENGTH, 1)
     predicted_scaled = model.predict(last_seq)
     return scaler.inverse_transform(predicted_scaled)[0][0]
 
-# --- 4. GARCH Volatility Weighting ---
-
 
 def get_volatility_weight(stock_series):
-    # Convert prices to percentage returns
     returns = 100 * stock_series.pct_change().dropna()
-    # GARCH(1,1) is the standard for financial risk modeling
     am = arch_model(returns, vol='Garch', p=1, q=1)
     res = am.fit(disp='off')
     forecast = res.forecast(horizon=1)
     tomorrow_vol = np.sqrt(forecast.variance.values[-1, :][0])
-    # Inverse volatility weighting: lower risk = higher weight
     return 1 / tomorrow_vol
-
-# --- 5. Main Execution Loop ---
 
 
 def run_system():
@@ -105,12 +85,9 @@ def run_system():
         except Exception as e:
             print(f"Error analyzing {stock}: {e}")
 
-    # --- 6. Portfolio Construction ---
     final_portfolio = []
     for res in results:
-        # Weight based on inverse volatility
         weight = res['Inv_Vol'] / total_inv_vol
-        # Calculate shares based on capital allocation
         shares = int((CAPITAL * weight) / res['Current'])
 
         final_portfolio.append([
@@ -121,7 +98,6 @@ def run_system():
             res['Forecast']
         ])
 
-    # Display Final Output Table
     df_final = pd.DataFrame(final_portfolio,
                             columns=['Stock', 'Weight%', 'Shares', 'Current', 'Forecast'])
 
