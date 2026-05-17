@@ -1,4 +1,4 @@
-from market_data import STOCKS, fetch_data
+from market_data import TARGET_STOCKS, fetch_data
 from statsmodels.tsa.stattools import adfuller
 from statsmodels.tsa.seasonal import STL
 import matplotlib.pyplot as plt
@@ -8,7 +8,12 @@ matplotlib.use("Agg")
 
 def check_stationarity(stock_name, series):
     print(f"--- ADF Test for {stock_name} ---")
-    result = adfuller(series.dropna())
+    cleaned = series.dropna()
+    if len(cleaned) < 20:
+        print("Insufficient data for ADF test")
+        return
+
+    result = adfuller(cleaned)
     print(f"ADF Statistic: {result[0]:.4f}")
     print(f"p-value: {result[1]:.4f}")
     if result[1] <= 0.05:
@@ -18,7 +23,13 @@ def check_stationarity(stock_name, series):
 
 
 def plot_decomposition(stock_name, series):
-    stl = STL(series.dropna(), period=252)
+    cleaned = series.dropna()
+    if len(cleaned) < 252:
+        print(
+            f"Skipping STL for {stock_name}: not enough observations for a 252-day seasonal period")
+        return
+
+    stl = STL(cleaned, period=252)
     res = stl.fit()
     fig = res.plot()
     fig.suptitle(f"STL Decomposition - {stock_name}")
@@ -33,7 +44,7 @@ def run_other_models():
     data = fetch_data()
 
     print("\nRunning ADF stationarity checks...\n")
-    for stock in STOCKS:
+    for stock in TARGET_STOCKS:
         if stock in data.columns:
             check_stationarity(stock, data[stock])
             print()
