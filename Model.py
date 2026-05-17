@@ -149,6 +149,7 @@ def validate_models(data=None):
     print(f"Test samples: {len(test_data)}")
 
     results = []
+    total_inv_vol = 0.0
 
     for stock in STOCKS:
         if stock not in train_data.columns or stock not in test_data.columns:
@@ -237,7 +238,6 @@ def run_system(data=None):
     validate_models(data)
 
     results = []
-    total_inv_vol = 0.0
 
     for stock in STOCKS:
         print(f"\n--- Analyzing {stock} ---")
