@@ -1,27 +1,13 @@
 import numpy as np
 import pandas as pd
-import yfinance as yf
-import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Dropout
+from tensorflow.keras.layers import Input, LSTM, Dense, Dropout
 from arch import arch_model
-import datetime
-import os
 
-STOCKS = ['RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'SUNPHARMA.NS',
-          'ITC.NS', 'BHARTIARTL.NS', 'LTTS.NS', 'ASIANPAINT.NS', 'ICICIBANK.NS']
+from market_data import STOCKS, fetch_data, get_latest_price
 CAPITAL = 1000000
-TRAIN_START = "2021-01-01"
 SEQ_LENGTH = 60
-
-
-def fetch_data():
-    print("Fetching historical data from Yahoo Finance...")
-    today = datetime.datetime.now().strftime('%Y-%m-%d')
-    df = yf.download(STOCKS, start=TRAIN_START,
-                     end=today, auto_adjust=True)['Close']
-    return df.ffill()
 
 
 def create_sequences(data, seq_length):
@@ -39,7 +25,8 @@ def get_lstm_prediction(stock_series):
     X, y = create_sequences(scaled_data, SEQ_LENGTH)
     X = np.reshape(X, (X.shape[0], X.shape[1], 1))
     model = Sequential([
-        LSTM(50, return_sequences=True, input_shape=(X.shape[1], 1)),
+        Input(shape=(X.shape[1], 1)),
+        LSTM(50, return_sequences=True),
         Dropout(0.2),
         LSTM(50, return_sequences=False),
         Dropout(0.2),
@@ -71,7 +58,7 @@ def run_system():
     for stock in STOCKS:
         print(f"\n--- Analyzing {stock} ---")
         try:
-            current_price = data[stock].iloc[-1]
+            current_price = get_latest_price(stock, data[stock])
             pred_price = get_lstm_prediction(data[stock])
             inv_vol = get_volatility_weight(data[stock])
 

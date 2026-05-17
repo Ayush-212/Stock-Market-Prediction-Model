@@ -1,9 +1,9 @@
-
-import matplotlib.pyplot as plt
-from statsmodels.tsa.seasonal import STL
+from market_data import STOCKS, fetch_data
 from statsmodels.tsa.stattools import adfuller
-
-from Model import STOCKS, fetch_data
+from statsmodels.tsa.seasonal import STL
+import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use("Agg")
 
 
 def check_stationarity(stock_name, series):
@@ -20,10 +20,13 @@ def check_stationarity(stock_name, series):
 def plot_decomposition(stock_name, series):
     stl = STL(series.dropna(), period=252)
     res = stl.fit()
-    res.plot()
-    plt.suptitle(f"STL Decomposition - {stock_name}")
-    plt.tight_layout()
-    plt.show()
+    fig = res.plot()
+    fig.suptitle(f"STL Decomposition - {stock_name}")
+    fig.tight_layout()
+    output_path = f"{stock_name.replace('.', '_').lower()}_stl.png"
+    fig.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    print(f"Saved STL decomposition plot to {output_path}")
 
 
 def run_other_models():
